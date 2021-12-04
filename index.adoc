@@ -1,0 +1,475 @@
+////
+NO CAMBIAR!!
+Codificación, idioma, tabla de contenidos, tipo de documento
+////
+:encoding: utf-8
+:lang: es
+:toc: right
+:toc-title: Tabla de contenidos
+:doctype: book
+:imagesdir: ./images
+:linkattrs:
+:toclevels: 4
+////
+Nombre y título del trabajo
+////
+# Testing de frontend con Cypress (tutorial en curso)
+Servicio de las Tecnologías de la Información y las Comunicaciones - Universidad de Almería
+
+image::logocloudstic.png[]
+
+// NO CAMBIAR!! (Entrar en modo no numerado de apartados)
+:numbered!: 
+
+
+[abstract]
+== Resumen
+////
+COLOCA A CONTINUACION EL RESUMEN
+////
+xxx
+
+////
+COLOCA A CONTINUACION LOS OBJETIVOS
+////
+.Objetivos
+* xxx
+
+[TIP]
+====
+Disponibles los repositorios usados en este tutorial.
+
+* xxx
+====
+
+// Entrar en modo numerado de apartados
+:numbered:
+
+## Introducción
+
+En el tutorial https://ualmtorres.github.io/SeminarioTesting[Testing de APIs NestJS] hemos visto cómo crear pruebas unitarias y de integración con Jest. Estos tests permiten que confiemos en una parte de la aplicación (clase del dominio, controlador o servicio). Estos tests se centran en la ejecución en un entorno de testing controlado. Pero ¿cómo funciona la aplicación desde el punto de vista del usuario? Nos podemos plantear colocar una persona a modo de _tester_ o podemos optar por tratar de programar los tests que respresentan la interacción de un usuario y comprobar que se comporta como se espera. Si además creamos una suite de tests, se podrán ejecutar de forma automática al implementar nuevas funcionalidades y al subir nuevo código al repositorio.
+
+A diferencia de lso tests unitarios y de integración vistos en el tutorial https://ualmtorres.github.io/SeminarioTesting[Testing de APIs NestJS], que prueban la aplicación desde el código, el testing e2e prueba el software desde la interfaz de usuario. El testing e2e (end-to-end) simula la interacción de un usuario real en escenarios o flujos de trabajo en una aplicación de usuario final. El testing e2e está orientado a detectar posibles problemas que pueden encontrar los usuario al interactuar con la aplcación. Para ello, el motor de testing lanza un navegador y lo controla de forma remota interactuando con él como si fuera un usuario. Luego, los tests hacen comprobaciones. ¿Está el contenido que se espera? ¿Ha cambiado la URL?
+
+[NOTE]
+====
+Los tests unitarios y de integración suelen ser rápidos pero no garantizan que tengamos una aplicación funcionando. Por contra, los tests end-to-end son más lentos pero están orientados a probar la aplicación como un todo.
+====
+
+El proceso de testing e2e suele seguir este flujo:
+
+. Iniciar aplicación
+. Login
+. Ir a una ruta específica de la aplicación
+. Trabajar con formularios y controles interactuando con la aplicación
+. Validar el resultado
+. Volver al paso 3
+
+.Entornos de ejecucion del backend
+****
+Los tests e2e requieren de un entorno lo más parecido al entorno real de producción. Para ello necesitamos disponer de diferentes entornos de backend (desarrollo, pruebas y producción). En el entorno de pruebas la base de datos será poblada con datos de prueba al inicio del proceso de testing o al inicio de cada test. Incluso puede haber una configuración global inicial y otra en cada test, dependiendo de la situación. *La base de datos de pruebas debe ser lo más parecida posible a la de producción*
+****
+
+## Cypress
+
+En este tutorial nos centraremos en https://www.cypress.io/[Cypress]. Cypress es una herramienta de testing de frontend que nos permite simular la interacción del usuario con una aplicación de usuario final. Fue creado originalmente para testing e2e de cualquier cosa que se ejecutara en un navegador, simulando las acciones de un usuario en la aplicación. No obstante, Cypress también puede realizar llamadas HTTP (y admite mocking), por lo que también se puede usar pasar testing de APIs. Cypress ofrece un IDE para lanzar y ver el resultado de las pruebas.
+
+
+[NOTE]
+====
+Si tienes experiencia en testing de frontend, conocerás https://www.selenium.dev/[Selenium]. En tal caso, Cypress es una evolución y una herramienta más avanzada que Selenium. Cypress incluye funcionalidades interesantes de mocking, espía y modificación de funciones, testing entre varios navegadores y tamaños de dispositivos.
+====
+
+Los tests de Cypress se integran en el proceso de desarrollo incluyéndose en la propia base de código del proyecto junto al resto de tests (unitarios, integración, ...). Esto lo hace muy interesante para incluir sus tests en el proceso de CI/CD. Además, como el tiempo de ejecución de los tests e2e es bastante mayor que el de los tests unitarios, conviene ejecutarlos en un servidor aparte.
+
+### Componentes de Cypress
+
+Cypress es muy sencillo de instalar (simplemente con `npm` o `yarn`) y viene con todo lo necesario. Se instala y funciona. Cypress consta de dos componentes: _Test Runner_ y _Dashboard_.
+
+* El _Test Runner_ visita rutas específicas de una aplicación y ejecuta los tests. Se puede instalar mediante `npm`/`yarn` o como un paquete del sistema operativo (disponible para MacOS, Linux y Windows). Cypress Test Runner ofrece una lista de navegadores compatibles con el ordenador en el que está instalado y permite seleccionar cualquiera de ellos para ejecutar los tests. El IDE de Cypress levanta un navegador y lo controla de forma remota para ejecutar los tests. Además, Cypress graba la ejecución de los tests, lo que es útil para poder verlo en diferido. Esto es especialmente útil cuando se usa el test runner en un entorno de CI/CD en modo headless/consola ya que se generará un video con todo el proceso de testing. El video se puede consultar después desde el otro componente, _Dashboard_. También se guardan imágenes con las capturas de pantalla de los tests fallidos.
+* El _Dashboard_ permite la ejecución remota de tests, integración en un sistema CI/CD (gracias a que permite ejecutar los tests en modo consola sin tener un navegador) y permite la grabación de los resultados de tests (resultado de cada test, imágenes con las capturas de pantalla de los resultados e incluso un video con la captura completa de la ejecución del proceso de testing). Existen dos servicios para ello:
+    ** https://docs.cypress.io/guides/dashboard/introduction#Features[Cypress Dashboard] es un servicio SaaS de Cypress en modo de pago por uso y dispone de una suscripción gratuita limitada. (https://dashboard.cypress.io/projects/vu8avj/runs?branches=%5B%5D&committers=%5B%5D&flaky=%5B%5D&page=1&status=%5B%5D&tags=%5B%5D&timeRange=%7B%22startDate%22%3A%221970-01-01%22%2C%22endDate%22%3A%222038-01-19%22%7D[Proyecto de ejemplo])
+    ** https://github.com/sorry-cypress/sorry-cypress[Sorry Cypress] es una iniciativa open source que permite tener un servicio propio de Dashboard para Cypress. Sorry Cypress también tiene una modalidad en modo SaaS mas económica que Cypress Dashboard. (https://sorry-cypress-demo.herokuapp.com/[Proyectos de ejemplo])
+
+Actualmente Cypress soporta los navegadores Chrome, Microsoft Edge, Firefox y Electron. No soporta Safari, Edge antiguos ni Internet Explorer. Cuando se lanza el test runner se ejecuta en una aplicación Electron.
+
+### Conociendo la sintaxis
+
+A continuación se muestra un extracto de un ejemplo extraído de la documentación oficial. Los tests en Cypress se organizan como en Jest, por lo que si conoces el tutorial https://ualmtorres.github.io/SeminarioTesting[Testing de APIs NestJS], aprender Cypress te resultará un proceso bastante asequible. Dentro de `describe` podemos usar bloques `beforeEach, afterEach, beforeAll` y `afterAll` como hacíamos en Jest.
+
+[source, ts]
+----
+...
+describe('Post Resource', () => {
+  it('Creating a New Post', () => {
+    cy.visit('/posts/new')  <1>
+
+    cy.get('input.post-title') <2>
+      .type('My First Post') <3>
+
+    cy.get('input.post-body') <4>
+      .type('Hello, world!') <5>
+
+    cy.contains('Submit') <6>
+      .click() <7>
+
+    cy.url() <8>
+      .should('include', '/posts/my-first-post')
+
+    cy.get('h1') <9>
+      .should('contain', 'My First Post')
+  })
+})
+...
+----
+<1> Visitar la ruta `/posts/new`
+<2> Buscar el `<input>` con clase `post-title`
+<3> Escribir `My First Post` en ese elemento 
+<4> Buscar el `<input>` con la clase `post-body`
+<5> Escribir `Hello, world!` en ese elemento
+<6> Buscar el elemento que contenga el texto `Submit`
+<7> Pulsarlo
+<8> Obtener la URL del navegador y comprobar que incluye `/posts/my-first-post`
+<9> Buscar la etiqueta `h1` y comprobar que tiene el texto `My First Post`
+
+Hablando del ejemplo, el objeto `cy` da acceso a la https://docs.cypress.io/api/table-of-contents[API de Cypress]. Se pueden usar una gran variedad de comandos para navegar, interactuar y validar la aplicación. Además, algunos comandos como `visit, get` o `contains` esperan y lo vuelven a intentar tras unos instantes si la ejecución falla debido a que los elementos DOM no estén disponibles aún.
+
+[NOTE]
+====
+Con Cypress no hay que esperar a que los elementos de la interfaz estén actualizados o contengan los datos esperados. De forma predeterminada Cypress espera a que los elementos estén disponibles antes de interactuar con ellos.
+====
+
+.Comandos básicos
+[width="100%",options="header"]
+|====================
+| Comando | Descripción
+| `visit`   |  Ir a la ruta indicada
+| `get`     |  Buscar elementos
+| `contains`|  Comprobar si el texto indicado está disponible en la página
+| `type`    |  Introducir el texto en el campo de texto
+| `click`    |  Hacer clic en el elemento DOM
+|====================
+
+También se pueden añadir comandos personalizados. El ejemplo siguiente muestra cómo implementar un método para login de forma que pueda ser usado en cualquier test que sea necesario.
+
+[source, ts]
+----
+Cypress.Commands.add('login', () => { 1>
+    cy.visit('/login');
+    cy.get('input[name=email]').type('foo@bar.com');
+    cy.get('input[name=password]').type('password');
+    cy.get('form').submit();
+});
+...
+cy.login(); <2>
+----
+<1> Creación de un comando `login` para hacer el login a la aplicación
+<2> Uso del comando`login` desde cualquier otro lugar
+
+### Comandos, _chainers_ y aserciones
+
+En el ejemplo anterior de `Post Resource` hemos ejecutado los comandos `visit`, `get`, `contains`, y `url`. Todos ellos devuelven un _chainer_ de Cypress, es decir, un wrapper sobre el valor u objeto (normalmente un elemento DOM) que devuelven los comandos. Los _chainers_ tienen métodos (p.e. `should`) para poder realizar aserciones.
+
+Respecto a los comandos, indicar que hay comandos de varios tipos:
+
+* Para controlar el navegador:
+** `cy.visit()` para ir a la URL que se le pase como parámetro.
+** `cy.reload()` para recargar la página.
+** `cy.go()` para ir hacia atrás (`back`) o hacia adelante (`forward`).
+
+* Para seleccionar elementos:
+** `cy.get()` selecciona elementos DOM mediante selectores al estilo jQuery.
+** `cy.find()` obtiene los descendientes DOM de un selector
+** `cy.contains()` obtiene el elemento DOM que tiene el texto que se le pasa como parámetro.
+
+* Para interactuar con los elementos:
+** `click()` hace clic sobre un elemento.
+** `dblclick()` hace doble clic sobre un elemento.
+** `rightclick()` hace clic con el botón derecho sobre un elemento.
+** `clear()` borra el contenido de un elemento (p.e. un cuadro de texto).
+** `type()` escribe el texto que se pase como argumento en un elemento (p.e. un cuadro de texto o un textarea). También se usa para introducir combinaciones de teclas (p.e. `{shift+alt+b}`).
+
+Respecto a las aserciones, Cypress usa la librería de aserciones https://www.chaijs.com/[Chai] que permite expresar las aserciones de una forma muy legible. 
+## Hola mundo
+
+### Instalación de Cypress
+
+Desde la carpeta del proyecto, ejecutamos en la terminal
+
+[source, bash]
+----
+$ ng add @cypress/schematic
+----
+
+Esto hará lo siguiente:
+
+* Añadirá las dependencia de Cypress a `package.json`.
+* Añadirá entradas en `package.json` para ejecutar los tests (p.e. `npm cypress open`, `npm cypress run`).
+* Hará que Cypress sea la herramienta de testing predeterminada del proyecto.
+* Añadirá un archivo de configuración `cypress.json` con las carpeta de los componentes de Cypress y la URL base de la aplicación.
+* creará una carpeta `cypress` en el proyecto con 4 subcarpetas: `fixtures`, `integration`, `plugins` y `support`. 
+** En `fixtures` se guardan datos en JSON para realizar las pruebas (p.e. los datos de login). Podemos pensar que es una carpeta para guardar archivos de variables y mocks. _Esta carpeta se crea realmente al ejecutar los tests por primera vez._
+** En `integrations` se guardan los tests e2e.
+** En `plugins` se configuran los plugins que queramos usar con Cypress (p.e. Mochawesome)
+** En `support` guardamos los comandos personalizados (p.e, un comando para login) e incluiremos todo lo que queramos ejecutar antes de ejecutar el testing.
+
++
+[NOTE]
+====
+El archivo `support/index.js` se procesa de forma automática antes de ejecutar los tests. Es un buen lugar para colocar configuración y comportamientos globales.
+====
+
+### El primer test de ejemplo
+
+Para abrir el Test runner ejecutamos 
+
+[source, bash]
+----
+$ npm run cypress:open
+----
+
+o 
+
+[source, bash]
+----
+$ ng e2e
+----
+
+[NOTE]
+====
+Si tenemos la aplicación corriendo, se nos pedirá si queremos ejecutar los tests en otro puerto. En este tutorial se está desarrollando sin tener la aplicación en ejecución.
+====
+
+La instalación de Cypress incluye un test de ejemplo en `cypress/integration/spec.ts`. Aquí se muestra:
+
+[source, ts]
+----
+describe('My First Test', () => {
+  it('Visits the initial project page', () => {
+    cy.visit('/');
+    cy.contains('Welcome')
+    cy.contains('sandbox app is running!')
+  });
+}
+----
+
+Al ejecutar los tests aparecerá Cypress con los archivos de test disponibles. En este caso aparece sólo el archivo `spec.ts` de ejemplo. 
+
+image::test-runner.png[]
+
+Al pulsar sobre el archivo o sobre `Run 1 integration spec` el test runner inicia un navegador y visita la URL de la aplicación. En el IDE Cypress tenemos el `Selector Playground` (el icono que parece un punto de mira). Permite seleccionar cualquier componente de la interfaz y proporciona el código que hay pegar en el test para interactuar con ese componente. Esta primera ejecución del test fallará porque el test de ejemplo busca los textos `Welcome` y `sandbox app is running!` en la página de inicio y no está disponible.
+
+Para ejecutar los tests sin abrir el IDE ejecutamos el comando siguiente, pero tiendo en cuenta que para ejecutar tests sin abrir el IDE, la aplicación tiene que estar en ejecución:
+
+[source, bash]
+----
+$ npx cypress run
+----
+
+El resultado de los tests se muestra en la consola. Sin embargo, es posible ofrecer una salida más elaborada. Esto se realiza usando _reporters_. En el el <<Anexo II. Mochawesome>> se explica cómo usar _Mochawesome_ como reporter de los tests e2e de Cypress. La figura siguiente ilustra un resultado de testing usando _Mochawesome_ como reporter.
+
+image::mochawesome.png[]
+
+Tras el fallo, pulsar en el elemento de log de la izquierda para obtener más información del error o ver snapshot del DOM asociado al comando. Para más información, consultar la https://docs.cypress.io/guides/core-concepts/test-runner[documentación oficial del Test runner].
+
+### Uso de _fixtures_
+
+Los _fixtures_ (accesorios) son archivos JSON definidos en archivos individuales. Se almacenan en la carpeta `cypress/fixtures`. Para usar un _fixture_ le asignaremos un alias.
+
+A modo de ejemplo crearemos un _fixture_ en `cypress/fixtures/users.json` para usuarios.
+
+[source, json]
+----
+[
+  {
+    "id": 1,
+    "name": "Leanne Graham",
+    "username": "Bret",
+    "email": "Sincere@april.biz"
+  },
+  {
+    "id": 2,
+    "name": "Ervin Howell",
+    "username": "Antonette",
+    "email": "Shanna@melissa.tv"
+  },
+  {
+    "id": 3,
+    "name": "Clementine Bauch",
+    "username": "Samantha",
+    "email": "Nathan@yesenia.net"
+  },
+  {
+    "id": 4,
+    "name": "Patricia Lebsack",
+    "username": "Karianne",
+    "email": "Julianne.OConner@kory.org"
+  }
+]
+----
+
+Para usarlos tenemos dos opciones: usarlos en un test individual o usarlos en desde cualquier test de la suite inicializándolos previamente en los métodos `before` o `beforeEach`. Veamos un ejemplo de cada uno.
+
+#### Fixture en test individual
+
+El fixture lo cargamos mediante una función de flecha y lo usamos dentro.
+
+[source, ts]
+----
+  it('Prints a user from user fixture initialized in the test', () => {
+    cy.fixture('users.json').then((users) => { <1>
+      cy.log('First user name: ', users[0].name); <2>
+    });
+  });
+----
+<1> Carga del fixture en una variable `users`
+<2> Acceso a la variable `users`
+
+La figura siguiente ilustra el resultado de la ejecución de este test.
+
+image::fixture-in-test.png[]
+
+#### Fixture inicializado para la suite
+
+Se trata de declarar una variable accesible desde toda la suite e inicializarla con el fixture en el método `before` o `beforeEach`.
+
+[source, ts]
+----
+  let theUsers: any; <1>
+
+  before(() => { <2>
+    cy.fixture('users').then((users) => {<3>
+      theUsers = users; <4>
+    });
+  });
+...
+  it('Prints a user from user fixture initialized in before method', () => {
+    cy.log('First user name: ', theUsers[0].name); <5>
+  });
+...
+----
+<1> Declaración de la variable en la que cargaremos el fixture
+<2> Método de inicialización para toda la suite
+<3> Función de flecha para carga del fixture
+<4> Inicialización de la variable con el fixture
+<5> Acceso a la variable que tiene el fixture
+
+La figura siguiente ilustra el resultado de la ejecución de este test.
+
+image::fixture-in-before.png[]
+
+## Sorry Cypress
+
+* Docker-compose: https://raw.githubusercontent.com/sorry-cypress/sorry-cypress/master/docker-compose.full.yml
+* npm install cy2 cypress
+* Dar de alta el proyecto en localhost:1234. Usar ese id en el cypress.json del proyecto (en `projectId`).
+* export CYPRESS_API_URL="http://localhost:1234/"
+* ./node_modules/cy2/bin/cy2 run --record --key secret --parallel --ci-build-id `date +%s`
+* ./node_modules/cy2/bin/cy2 run --record --key secret --parallel --ci-build-id "sip 0.2"
+* Hay que añadir 127.0.0.1 storage en /etc/hosts para que suba los videos 
+
+// Entrar en modo numerado de apartados
+:!numbered:
+
+## Anexo I. Visual Testing
+
+A veces es necesario probar en un flujo de trabajo de pruebas el estado visual de un componente. Por ejemplo, se quiere probar si está visible o no un componente. Incluso pueden crearse tests para comprobar el tamaño, color y estilo de los componentes. Por supuesto, se pueden crear tests y comprobar el estado visual de los elementos DOM. Esto deriva en tests complejos. Sin embargo, hay una forma mejor de abordar este proceso de testing. Se trata de crear unos snapshots de los componentes o de la aplicación y compararlos con los snapshots de referencia.
+
+Consultar https://www.thinktecture.com/en/angular/e2e-tests-with-cypress-and-angular/#cypress-in-action[post en Thinktecture]
+
+## Anexo II. Mochawesome
+
+De forma predeterminada, el resultado de los tests se muestra por la consola. Posteriormente, los resultados no se pueden consultar. Por tanto, para obtener información sobre cómo fueron ciertos tests, o hacer cambios en la aplicación atendiendo a los tests que indicaron un error, habría que volver a pasar los tests. Esto, dependiendo de la cantidad de tests a pasar puede ser demasiado tiempo de espera. Para solucionar este problema se usa otro _reporter_. Los reporters guardarán sus resultados en archivos que luego podremos abrir para recuperar el resultado de los tests. https://github.com/adamgruber/mochawesome#readme[Mochawesome] genera un archivo JSON. Con la herramienta `marge` generaremos un HTML interactivo con el resultado de los tests (del archivo JSON).
+
+Para configurar Mochawesome, instalaremos el generador de informes a nivel global y el reporter para Cypress en el proyecto. Para ello, ejecutareos en la terminal los comandos siguientes :
+
+[source, bash]
+----
+$ npm install -g mochawesome-report-generator
+$ npm install --save-dev cypress-mochawesome-reporter
+----
+
+Después, añadir lo siguiente a `cypress/support/index.ts`
+
+[source, ts]
+----
+import 'cypress-mochawesome-reporter/register';
+----
+
+A continuación, modificar `cypress/plugins/index.ts` para que quede así:
+
+[source, ts]
+----
+...
+module.exports = (on, config) => {
+  require('cypress-mochawesome-reporter/plugin')(on); <1>
+}
+----
+<1> Añadimos esta línea
+
+Añadimos esto a `cypress.json`
+
+[source, json]
+----
+...
+  "reporter": "mochawesome",
+  "reporterOptions": {
+    "reportDir": "cypress/results",
+    "overwrite": false,
+    "html": false,
+    "json": true
+  }
+...
+----
+
+Ahora lanzamos los tests con el comando siguiente, recordando que la aplicación tiene que estar en ejecución porque `run` ejecuta los tests en modo _headless_.
+
+[source, ts]
+----
+$ npx cypress run 
+----
+
+Esto genera un archivo `results/mochawesome.json`.
+
+Ahora toca generar el HTML con `marge`:
+
+[source, bash]
+----
+$ npx marge cypress/results/mochawesome.json
+----
+
+Los resultados elaborados de Mochawesome se enviarán a la carpeta `mochawesome-report`. Finalmente, si abrimos el archivo `mochawesome.html` veremos los resultados del testing al estilo de _Mochawesome_.
+
+image::mochawesome.png[]
+
+## Anexo III. Tests en GitLab CI
+
+Para ejecutar los tests de Cypress en GitLab CI basta con usar la imagen Cypress. A continuación se muestra un ejemplo de un `.gitlab-ci.yml` básico.
+
+[source, yml]
+----
+image: cypress/base:10
+cypress-e2e:
+  script:
+    - npm install
+    - $(npm bin)/cypress run
+  artifacts:
+    expire_in: 1 week
+    paths:
+    - cypress/screenshots
+    - cypress/videos
+----
+
+Para más información, consultar el https://gitlab.com/cypress-io/cypress-example-docker-gitlab[repositorio del ejemplo de Docker para GitLab].
+
+[INFO]
+====
+Consultar la https://docs.cypress.io/examples/examples/docker#Examples[página de ejemplos de Docker] de Cypress. Contiene enlaces para ejecutar tests Cypress en GitLab, Circle CI y para ejecutar Cypress en Docker y Docker Compose.
+====
+
+## Referencias
+
+* https://www.thinktecture.com/en/angular/e2e-tests-with-cypress-and-angular[End-to-End Testing of Angular Components with Cypress]
+* https://madewithlove.com/blog/software-engineering/cypress-or-how-i-learned-to-stop-worrying-and-love-e2e/[Cypress or how I learned to stop worrying and love E2E]
+* http://antontelesh.github.io/testing/2019/02/04/mochawesome-merge.html[Integrating Mochawesome reporter with Cypress]
+
